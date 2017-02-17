@@ -1,0 +1,68 @@
+build:
+  box: ubuntu
+  steps:
+
+    - script:
+        name: update application
+        code: |
+          apt-get update
+    - script:
+        name: install depedencies
+        code: |
+           apt-get install -y ruby ruby-dev ruby-bundler rubygems build-essential make
+
+    - script:
+        name: gem update
+        code: |
+          gem update --system		   
+
+    - script:
+        name: install middleman
+        code: |
+          gem install middleman		   
+		  
+    - script:
+        name: install javascript executioner
+        code: |
+          apt-get install nodejs
+		   
+#    - script:
+#        name: gem install
+#        code: |
+#          gem install --no-ri --no-rdoc bundler
+
+#	- script:
+#        name: create app directory
+#        code: |
+#          mkdir app /  
+
+	- script:
+        name: bundle install
+        code: |
+          bundle install
+
+
+	- script:
+        name: middleman build
+        code: |
+          bundle exec middleman build --clean
+
+    - script:
+        name: copy static html
+        code: cp /build/ "$WERCKER_OUTPUT_DIR"
+
+deploy:   
+    box: nginx:alpine
+		  
+    - script:
+        name: copy static html
+        code: cp . /usr/share/nginx/html/     
+          
+    - internal/docker-push:
+        username: $ARTIFACTORY_USERNAME
+        password: $ARTIFACTORY_PASSWORD
+        repository: ric-docker-local.jfrog.io/platform/api-catalog
+        registry: https://ric-docker-local.jfrog.io/v2
+        ports: "80"
+        working-dir: /pipeline/output/
+        tag: $WERCKER_GIT_COMMIT
